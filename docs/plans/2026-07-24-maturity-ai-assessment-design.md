@@ -67,3 +67,7 @@ La siguiente etapa agregará un asistente de importación CSV/XLSX/Google Sheets
 El MVP incorpora actualización manual desde una URL CSV pública de Google Sheets. El docente puede pegar la URL de exportación o una URL de edición pública; el servidor la normaliza a CSV, acepta únicamente hosts de Google Sheets y analiza los encabezados antes de entregar los datos al navegador.
 
 La importación no mezcla datos reales y demostrativos: si se detectan columnas compatibles con una dimensión, se reemplaza el dataset activo y se identifica la fuente como “Planilla real”. Si la estructura no permite calcular al menos dos dimensiones, se conserva el dataset actual y se explica qué columnas deben mapearse. La URL se recuerda únicamente en el navegador hasta que exista una configuración persistente de sesión.
+
+## Recorrido visual final
+
+La visualización se limita a siete campos de la fuente: score general, nivel de madurez, estrategia y visión, gobernanza y CoE, datos y tecnología, talento y cultura, y adopción y escala. El modo principal es una secuencia de presentación con portada, resultado general, radar de cinco dimensiones, ranking de fortalezas y oportunidades, comparador seguro de segmentos y cierre de discusión. No se derivan ni se muestran otras dimensiones.

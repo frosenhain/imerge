@@ -71,6 +71,8 @@ export async function POST(request: Request) {
         role: segment(row, ["rol", "cargo", "area"], "Sin clasificar"),
         experience: segment(row, ["experiencia", "conocimiento"], "No informado"),
         scores: Object.fromEntries(Object.entries(scores).map(([key, values]) => [key, values.reduce((a, b) => a + b, 0) / values.length])),
+        scoreGeneral: Number(row[headers.findIndex((header) => normalize(header).includes("score general"))]) || null,
+        maturityLevel: row[headers.findIndex((header) => normalize(header).includes("nivel de madurez"))] || "No informado",
         open: ""
       };
     }).filter((participant) => Object.keys(participant.scores).length > 0);
