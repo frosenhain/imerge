@@ -61,3 +61,9 @@ La interfaz será clara, académica y de alto contraste, pensada para proyectore
 ## Evolución prevista
 
 La siguiente etapa agregará un asistente de importación CSV/XLSX/Google Sheets, mapeo flexible de columnas y persistencia de sesión y participación en vivo. Los contratos normalizados del dataset y del estado de exploración evitan acoplar las visualizaciones a encabezados específicos de una planilla.
+
+## Importación por planilla pública
+
+El MVP incorpora actualización manual desde una URL CSV pública de Google Sheets. El docente puede pegar la URL de exportación o una URL de edición pública; el servidor la normaliza a CSV, acepta únicamente hosts de Google Sheets y analiza los encabezados antes de entregar los datos al navegador.
+
+La importación no mezcla datos reales y demostrativos: si se detectan columnas compatibles con una dimensión, se reemplaza el dataset activo y se identifica la fuente como “Planilla real”. Si la estructura no permite calcular al menos dos dimensiones, se conserva el dataset actual y se explica qué columnas deben mapearse. La URL se recuerda únicamente en el navegador hasta que exista una configuración persistente de sesión.

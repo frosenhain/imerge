@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Dimension = { id: string; name: string; color: string; questions: string[] };
 type Person = { id: number; industry: string; role: string; experience: string; scores: Record<string, number>; open: string };
@@ -58,8 +58,16 @@ export default function Home() {
   const [answer, setAnswer] = useState("");
   const [story, setStory] = useState<string[]>([]);
   const [reveal, setReveal] = useState(false);
+  const [activePeople, setActivePeople] = useState(people);
+  const [source, setSource] = useState<"demo" | "real">("demo");
+  const [showImport, setShowImport] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState("");
+  const [importMessage, setImportMessage] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
 
-  const filtered = useMemo(() => filter === "Todos" ? people : people.filter((p) => p.experience === filter), [filter]);
+  useEffect(() => { setSheetUrl(window.localStorage.getItem("maturity-sheet-url") ?? ""); }, []);
+
+  const filtered = useMemo(() => filter === "Todos" ? activePeople : activePeople.filter((p) => p.experience === filter), [filter, activePeople]);
   const scores = useMemo(() => dimensions.map((dimension) => ({ dimension, value: mean(filtered.map((p) => p.scores[dimension.id])) })), [filtered]);
   const overall = mean(scores.map((x) => x.value));
   const strongest = [...scores].sort((a, b) => b.value - a.value)[0];
@@ -70,21 +78,34 @@ export default function Home() {
     const focus = q.includes("barrera") || q.includes("riesgo") ? opportunity : q.includes("desacuerdo") ? disagreement : strongest;
     setAnswer(`La evidencia disponible señala ${focus.dimension.name} como ${focus === opportunity ? "la principal oportunidad" : focus === disagreement ? "la dimensión con mayor desacuerdo" : "una fortaleza relativa"}: ${pct(focus.value).toFixed(0)}/100, con ${filtered.length} respuestas. Esto describe percepciones del grupo, no prueba causalidad. Podés abrir “Brechas” para revisar las preguntas y la dispersión que sustentan esta lectura.`);
   };
+  const importSheet = async () => {
+    setIsImporting(true); setImportMessage("");
+    try {
+      const response = await fetch("/api/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: sheetUrl }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "No se pudieron actualizar los datos.");
+      setActivePeople(result.participants); setSource("real"); setFilter("Todos");
+      window.localStorage.setItem("maturity-sheet-url", sheetUrl);
+      setImportMessage(`Actualizado: ${result.summary.rows} respuestas y ${result.summary.detectedDimensions.length} dimensiones detectadas.`);
+    } catch (error) { setImportMessage(error instanceof Error ? error.message : "No se pudieron actualizar los datos."); }
+    finally { setIsImporting(false); }
+  };
   const nav = [{ id: "pulso", label: "Pulso" }, { id: "dimensiones", label: "Dimensiones" }, { id: "preguntas", label: "Preguntas" }, { id: "brechas", label: "Brechas" }, { id: "comparar", label: "Comparar" }, { id: "conversar", label: "Conversar" }];
   const addFinding = (text: string) => setStory((items) => items.includes(text) ? items : [...items, text]);
 
   return <main>
-    <aside className="sidebar"><div className="brand"><span className="spark">✦</span><div>AI maturity<small>Di Tella · demo</small></div></div><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>Explorar</button><button className={mode === "class" ? "active" : ""} onClick={() => setMode("class")}>Modo clase</button></div><nav>{nav.map((item) => <button key={item.id} className={tab === item.id ? "nav-active" : ""} onClick={() => { setTab(item.id); setMode("explore"); }}>{item.label}</button>)}</nav><div className="source"><span>●</span> Datos de demostración<br/><small>64 respuestas anónimas</small></div></aside>
+    <aside className="sidebar"><div className="brand"><span className="spark">✦</span><div>AI maturity<small>Di Tella · {source === "real" ? "planilla real" : "demo"}</small></div></div><div className="mode-switch"><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>Explorar</button><button className={mode === "class" ? "active" : ""} onClick={() => setMode("class")}>Modo clase</button></div><nav>{nav.map((item) => <button key={item.id} className={tab === item.id ? "nav-active" : ""} onClick={() => { setTab(item.id); setMode("explore"); }}>{item.label}</button>)}</nav><div className="source"><span>●</span> {source === "real" ? "Planilla real" : "Datos de demostración"}<br/><small>{activePeople.length} respuestas anónimas</small></div></aside>
     <section className="content"><header><div><p className="eyebrow">MADUREZ Y ADOPCIÓN DE AI</p><h1>{mode === "class" ? "Un recorrido para conversar con el grupo" : "¿Qué nos dicen las respuestas?"}</h1><p className="sub">Una exploración interactiva basada en respuestas de la clase.</p></div><div className="header-actions"><select aria-label="Filtrar por experiencia" value={filter} onChange={(e) => setFilter(e.target.value)}><option>Todos</option>{experiences.map((x) => <option key={x}>{x}</option>)}</select><button className="outline" onClick={() => setFilter("Todos")}>Reiniciar</button></div></header>
+      {showImport && <section className="import-panel card"><div><p className="eyebrow">FUENTE DE DATOS</p><h2>Actualizar desde Google Sheets</h2><p>Pegá el enlace público de edición de la planilla. Solo se leerán datos agregados; no se guardan credenciales.</p></div><div className="prompt"><input value={sheetUrl} onChange={(event) => setSheetUrl(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=0" /><button onClick={importSheet} disabled={isImporting}>{isImporting ? "Actualizando…" : "Actualizar datos"}</button></div>{importMessage && <p className={source === "real" ? "import-success" : "import-error"}>{importMessage}</p>}<button className="text-button" onClick={() => setShowImport(false)}>Cerrar</button></section>}
       {mode === "class" ? <ClassMode overall={overall} strongest={strongest.dimension.name} opportunity={opportunity.dimension.name} reveal={reveal} setReveal={setReveal} story={story} addFinding={addFinding} /> : <>
         {tab === "pulso" && <Pulse overall={overall} strongest={strongest.dimension.name} opportunity={opportunity.dimension.name} disagreement={disagreement.dimension.name} count={filtered.length} scores={scores} addFinding={addFinding} />}
         {tab === "dimensiones" && <Dimensions scores={scores} people={filtered} />}
         {tab === "preguntas" && <Questions scores={scores} count={filtered.length} />}
         {tab === "brechas" && <Gaps strategy={scores.find((x) => x.dimension.id === "strategy")!.value} execution={mean([scores.find((x) => x.dimension.id === "adoption")!.value, scores.find((x) => x.dimension.id === "governance")!.value])} count={filtered.length} addFinding={addFinding} />}
-        {tab === "comparar" && <Compare />}
+        {tab === "comparar" && <Compare people={activePeople} />}
         {tab === "conversar" && <section className="chat card"><p className="eyebrow">ASISTENTE CON EVIDENCIA</p><h2>Conversar con los datos</h2><p>Preguntá por barreras, desacuerdos, dimensiones o comparaciones. La respuesta usa métricas reales de esta demo.</p><div className="prompt"><input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask()} placeholder="Ej.: ¿Dónde existe mayor desacuerdo?" /><button onClick={ask}>Analizar</button></div>{answer && <div className="answer"><strong>Respuesta directa</strong><p>{answer}</p><div className="evidence">Evidencia · {filtered.length} respuestas · Filtro: {filter} · Confianza interpretativa: moderada</div><button className="text-button" onClick={() => addFinding(answer)}>+ Agregar al relato</button></div>}</section>}
       </>}
-      {story.length > 0 && <footer className="story"><strong>Relato de clase · {story.length} hallazgo{story.length > 1 ? "s" : ""}</strong><button onClick={() => setStory([])}>Limpiar</button></footer>}
+      {story.length > 0 && <footer className="story"><strong>Relato de clase · {story.length} hallazgo{story.length > 1 ? "s" : ""}</strong><button onClick={() => setStory([])}>Limpiar</button></footer>}<button className="refresh" onClick={() => setShowImport(true)}>↻ Actualizar datos</button>
     </section>
   </main>;
 }
@@ -102,7 +123,7 @@ function Questions({ scores, count }: { scores: { dimension: Dimension; value: n
 
 function Gaps({ strategy, execution, count, addFinding }: { strategy: number; execution: number; count: number; addFinding: (s: string) => void }) { const gap = pct(strategy - execution); const text = `Estrategia y visión supera la capacidad de ejecución en ${gap.toFixed(0)} puntos.`; return <section><div className="section-title"><div><p className="eyebrow">BRECHAS Y CONTRADICCIONES</p><h2>Patrones para discutir, no conclusiones automáticas</h2></div></div><article className="tension card"><span className="tag">TENSIÓN DETECTADA</span><h2>{text}</h2><div className="tension-grid"><div><b>Dato observado</b><p>Estrategia: {pct(strategy).toFixed(0)}/100 · Adopción y gobierno: {pct(execution).toFixed(0)}/100.</p></div><div><b>Hipótesis para debatir</b><p>La intención puede avanzar más rápido que las capacidades, roles y controles necesarios para escalar.</p></div><div><b>Precaución</b><p>Se trata de percepciones agregadas de {count} respuestas; no demuestra una relación causal.</p></div></div><button onClick={() => addFinding(text)}>Agregar al relato</button></article><article className="tension card"><span className="tag pale">PREGUNTA SUGERIDA</span><h2>¿Qué tendría que cambiar para que los experimentos pasen a formar parte del trabajo cotidiano?</h2></article></section>; }
 
-function Compare() { const groups = experiences.map((experience) => { const group = people.filter((p) => p.experience === experience); return { experience, score: mean(group.flatMap((p) => Object.values(p.scores))) }; }); return <section className="card"><p className="eyebrow">COMPARADOR DE GRUPOS</p><h2>Experiencia previa con AI</h2><p>Solo se muestran grupos con cinco o más respuestas.</p><div className="compare">{groups.map((g) => <div key={g.experience}><span>{g.experience}</span><strong>{pct(g.score).toFixed(0)}</strong><div><i style={{ width: `${pct(g.score)}%` }} /></div><small>{people.filter((p) => p.experience === g.experience).length} respuestas</small></div>)}</div><div className="notice">La diferencia describe a estos grupos. No permite inferir que la experiencia previa cause el resultado.</div></section>; }
+function Compare({ people }: { people: Person[] }) { const groups = [...new Set(people.map((person) => person.experience))].filter((experience) => people.filter((person) => person.experience === experience).length >= 5).map((experience) => { const group = people.filter((p) => p.experience === experience); return { experience, score: mean(group.flatMap((p) => Object.values(p.scores))) }; }); return <section className="card"><p className="eyebrow">COMPARADOR DE GRUPOS</p><h2>Experiencia previa con AI</h2><p>Solo se muestran grupos con cinco o más respuestas.</p><div className="compare">{groups.map((g) => <div key={g.experience}><span>{g.experience}</span><strong>{pct(g.score).toFixed(0)}</strong><div><i style={{ width: `${pct(g.score)}%` }} /></div><small>{people.filter((p) => p.experience === g.experience).length} respuestas</small></div>)}</div><div className="notice">La diferencia describe a estos grupos. No permite inferir que la experiencia previa cause el resultado.</div></section>; }
 
 function ClassMode({ overall, strongest, opportunity, reveal, setReveal, story, addFinding }: { overall: number; strongest: string; opportunity: string; reveal: boolean; setReveal: (v: boolean) => void; story: string[]; addFinding: (s: string) => void }) { const scene = !reveal ? "Predicción inicial" : "Revelación del resultado"; const finding = `Resultado revelado: ${stage(overall)} (${pct(overall).toFixed(0)}/100).`; return <><section className="class-hero"><p className="eyebrow">ESCENA 2 DE 6 · {scene.toUpperCase()}</p><h1>{!reveal ? "Antes de mirar los datos… ¿dónde creen que está la mayor barrera?" : finding}</h1><p>{!reveal ? "Invitá al grupo a votar una hipótesis. Después revelá la evidencia." : `${strongest} aparece como fortaleza relativa y ${opportunity} como oportunidad.`}</p><button onClick={() => setReveal(!reveal)}>{reveal ? "Volver a ocultar" : "Revelar resultado"}</button>{reveal && <button className="outline" onClick={() => addFinding(finding)}>Guardar hallazgo</button>}</section><section className="activities"><article className="card"><p className="eyebrow">ACTIVIDAD</p><h2>Votación de hipótesis</h2><p>¿Qué explica mejor la brecha entre interés y adopción?</p><div className="vote"><button>Habilidades insuficientes <span>42%</span></button><button>Falta de gobierno <span>31%</span></button><button>Sin tiempo para cambiar <span>27%</span></button></div></article><article className="card"><p className="eyebrow">RELATO</p><h2>{story.length} hallazgos guardados</h2><p>Guardá evidencia y preguntas para construir el cierre de la clase.</p><button className="outline">Ver relato</button></article></section></>;
 }
