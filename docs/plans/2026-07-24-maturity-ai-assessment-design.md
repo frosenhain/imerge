@@ -1,0 +1,63 @@
+# Diseño: experiencia de madurez y adopción de AI
+
+## Objetivo
+
+Construir una demo local para una clase de maestría de la Universidad Torcuato Di Tella. La aplicación convierte un assessment de adopción de AI en una experiencia de exploración, discusión y presentación. Debe funcionar sin una fuente externa al principio y permitir reemplazar el dataset demostrativo por una planilla real más adelante.
+
+## Alcance del MVP
+
+El MVP incluirá un dataset simulado, scoring configurable, análisis descriptivo, segmentación segura, comparador de grupos, detección explicable de tensiones, asistente grounded local, modo clase, tres dinámicas participativas y un constructor básico de relato.
+
+No incluye inicialmente autenticación, persistencia multiusuario, Google Sheets API, votación sincronizada ni llamadas a un modelo externo. Los límites de integración se diseñarán para incorporarlos sin reescribir las vistas ni los cálculos.
+
+## Arquitectura
+
+- Next.js con TypeScript y Tailwind CSS.
+- Datos, configuración del assessment y lógica estadística en módulos independientes y testeables.
+- Un único estado de exploración mantiene filtros, segmentos, modo de scoring y visualización activa. Tanto el modo libre como el modo clase consumen ese estado.
+- Un adaptador de fuente de datos expone el dataset demostrativo. Adaptadores futuros importarán CSV/XLSX y Google Sheets y producirán el mismo modelo normalizado.
+- Un adaptador de asistente local consulta funciones analíticas tipadas y produce respuestas en español con evidencia. Un adaptador de modelo generativo podrá reemplazarlo después.
+
+## Modelo de datos
+
+- `Assessment`: título, fecha de actualización, fuente, umbrales y configuración de privacidad.
+- `Dimension` y `Question`: definición, escala, peso, dirección de puntuación y texto pedagógico.
+- `Participant`: identificador anónimo y atributos de segmentación.
+- `Response`: participante, pregunta, valor cuantitativo u observación abierta.
+- `ScoringConfig`: normalización, preguntas excluidas, pesos y umbrales de etapas.
+- `Finding` y `StoryItem`: hallazgos guardados y elementos de la narrativa de clase.
+- `LiveActivity`: predicción, votación de hipótesis o priorización, inicialmente de alcance local.
+
+La capa analítica no usa identificadores personales. Los segmentos de menos de cinco respuestas se suprimen o se agrupan en “Otros”.
+
+## Navegación y experiencia
+
+La portada muestra título, participantes, actualización, fuente y las dos entradas principales:
+
+1. **Explorar libremente**: pulso general, radar, ranking, preguntas, heatmap, brechas, comparación y conversación con datos.
+2. **Modo clase**: una secuencia de escenas para revelar información progresivamente, lanzar actividades, registrar hallazgos y avanzar hacia el cierre.
+
+La aplicación conserva filtros, segmentos, modo de ponderación y hallazgos al alternar entre ambos recorridos. Una barra persistente permite volver a inicio, restaurar filtros y acceder al relato.
+
+## Análisis y trazabilidad
+
+El motor calcula promedio, mediana, dispersión, completitud y tamaño de muestra. Normaliza scores a 0–100 solo cuando la configuración está validada; de otro modo marca el índice como experimental.
+
+Las contradicciones se detectan mediante reglas explícitas, por ejemplo estrategia alta con ejecución baja o alta experimentación con bajo gobierno. Cada tarjeta separa dato observado, interpretación posible e hipótesis de discusión; incluye preguntas fuente, brecha, muestra y precauciones.
+
+El asistente local responde exclusivamente sobre resultados calculados. Cada respuesta muestra evidencia, preguntas/dimensiones analizadas, filtros activos, tamaño muestral y limitaciones. Si no hay soporte suficiente, indica que no encuentra evidencia disponible.
+
+## Visualización y accesibilidad
+
+La interfaz será clara, académica y de alto contraste, pensada para proyectores. Usará radar como resumen complementado por barras ordenables, distribuciones por pregunta y heatmap. Nunca ocultará tamaño muestral ni reemplazará la distribución por un único promedio. Tendrá modo claro/oscuro y una variante de presentación de tipografía grande.
+
+## Validación
+
+- Pruebas unitarias para normalización, inversión de escalas, supresión de segmentos y reglas de contradicción.
+- Validación de tipos y lint.
+- Prueba de compilación de producción.
+- Revisión visual de las rutas clave y estados vacío/error usando datos demostrativos.
+
+## Evolución prevista
+
+La siguiente etapa agregará un asistente de importación CSV/XLSX/Google Sheets, mapeo flexible de columnas y persistencia de sesión y participación en vivo. Los contratos normalizados del dataset y del estado de exploración evitan acoplar las visualizaciones a encabezados específicos de una planilla.
