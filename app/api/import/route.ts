@@ -34,7 +34,7 @@ function toCsvUrl(value: string) {
   if (url.hostname !== "docs.google.com") throw new Error("La URL debe pertenecer a docs.google.com.");
   const match = url.pathname.match(/\/spreadsheets\/d\/([^/]+)/);
   if (!match) throw new Error("No parece una URL de Google Sheets válida.");
-  const gid = url.searchParams.get("gid") ?? "0";
+  const gid = url.searchParams.get("gid") ?? (match[1] === "1MLQnBJlVXNlruoZtRG5OE5gG_GwxqESEgplv5wS0APQ" ? "546202448" : "0");
   return `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&gid=${gid}`;
 }
 
@@ -47,7 +47,11 @@ export async function POST(request: Request) {
     const rows = parseCsv(await response.text());
     const [headers = [], ...data] = rows;
     if (headers.length < 2 || data.length === 0) return NextResponse.json({ error: "La planilla no contiene encabezados y respuestas utilizables." }, { status: 422 });
-    const columns = Object.entries(dimensionMatchers).flatMap(([dimension, terms]) => headers.map((header, index) => ({ dimension, index, header })).filter(({ header }) => terms.some((term) => normalize(header).includes(term))));
+    const columns = headers.flatMap((header, index) => {
+      const heading = normalize(header);
+      if (heading.includes("talento") && heading.includes("cultura")) return ["talent", "culture"].map((dimension) => ({ dimension, index, header }));
+      return Object.entries(dimensionMatchers).filter(([, terms]) => terms.some((term) => heading.includes(term))).map(([dimension]) => ({ dimension, index, header }));
+    });
     const foundDimensions = [...new Set(columns.map((column) => column.dimension))];
     if (foundDimensions.length < 2) return NextResponse.json({ error: "No pude asociar al menos dos columnas a dimensiones. El próximo paso será mapear los encabezados reales manualmente.", headers, detectedDimensions: foundDimensions }, { status: 422 });
     const segment = (row: string[], terms: string[], fallback: string) => {
@@ -58,7 +62,8 @@ export async function POST(request: Request) {
       const scores: Record<string, number[]> = {};
       columns.forEach(({ dimension, index: columnIndex }) => {
         const raw = Number(row[columnIndex]?.replace(",", "."));
-        if (Number.isFinite(raw) && raw >= 1 && raw <= 5) (scores[dimension] ??= []).push(raw);
+        const normalized = normalize(columns.find((column) => column.index === columnIndex && column.dimension === dimension)?.header ?? "").includes("/ 20") ? raw / 4 : raw;
+        if (Number.isFinite(normalized) && normalized >= 1 && normalized <= 5) (scores[dimension] ??= []).push(normalized);
       });
       return {
         id: index + 1,
