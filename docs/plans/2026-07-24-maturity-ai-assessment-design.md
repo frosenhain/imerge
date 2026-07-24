@@ -71,3 +71,7 @@ La importación no mezcla datos reales y demostrativos: si se detectan columnas 
 ## Recorrido visual final
 
 La visualización se limita a siete campos de la fuente: score general, nivel de madurez, estrategia y visión, gobernanza y CoE, datos y tecnología, talento y cultura, y adopción y escala. El modo principal es una secuencia de presentación con portada, resultado general, radar de cinco dimensiones, ranking de fortalezas y oportunidades, comparador seguro de segmentos y cierre de discusión. No se derivan ni se muestran otras dimensiones.
+
+## Impacto en clase
+
+El recorrido suma tres intervenciones pedagógicas: una predicción local antes de revelar el perfil, una escena de tensión que contrapone la dimensión relativa más fuerte y la oportunidad principal, y un narrador basado en los resultados visibles. El narrador distingue observación, importancia, límite interpretativo y pregunta de debate; no formula causalidad ni inventa evidencia.
