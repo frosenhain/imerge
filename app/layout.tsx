@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Madurez y adopción de AI",
-  description: "Exploración interactiva basada en respuestas de clase"
+  title: "Imerge Corporate Center | Guatemala",
+  description: "Espacios, tecnología y experiencias para eventos que dejan marca."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
