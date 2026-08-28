@@ -2,7 +2,9 @@ import { get, put } from "@vercel/blob";
 import { AgendaEvent, DEFAULT_EVENTS, normalizeAgenda } from "@/lib/agenda";
 
 const pathname = "imerge/agenda.json";
-const configured = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN || (process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID));
+// Los Blob creados desde el panel de Vercel usan BLOB_STORE_ID y autenticación
+// OIDC administrada por la plataforma. Los proyectos antiguos pueden usar el token.
+const configured = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 
 export async function readAgenda(): Promise<AgendaEvent[]> {
   if (!configured()) return DEFAULT_EVENTS;
